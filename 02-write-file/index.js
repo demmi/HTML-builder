@@ -6,7 +6,7 @@ const rl = readline.createInterface({
     output: process.stdout,
     prompt: 'Введите текст > ',
 });
-const filePath = path.resolve('02-write-file', 'log.txt');
+const filePath = path.resolve(__dirname, 'log.txt');
 
 fs.unlink(filePath, (err) => {});
 const logger = fs.createWriteStream(filePath, {flags: 'a'});
