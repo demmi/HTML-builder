@@ -1,4 +1,3 @@
-const fs = require('fs');
 const fsPromises = require('fs/promises');
 const path = require('path');
 
@@ -22,28 +21,34 @@ async function copyDirectory(src, dest) {
     }
 }
 
-function createStyles(src, dest) {
-    let writeCSS = fs.createWriteStream(dest)
-    fs.readdir(src, {
+async function createStyles(src, dest) {
+    await fsPromises.writeFile(dest, '')
+    let files = await fsPromises.readdir(src, {
         withFileTypes: true
-    }, (err, files) => {
-        files.forEach(file => {
-            if (file.isFile() && path.extname(file.name) === '.css') {
-                let readCSS = fs.createReadStream(path.resolve(src, file.name))
-                readCSS.pipe(writeCSS)
-            }
-        })
+    })
+    files.forEach(async file => {
+        if (file.isFile() && path.extname(file.name) === '.css') {
+            let content = await fsPromises.readFile(path.resolve(src, file.name), {
+                encoding: 'utf-8'
+            })
+            await fsPromises.appendFile(dest, content+'\n')
+        }
     })
 }
 
+
 async function readTemplate() {
-    let template = await fsPromises.readFile(path.resolve(__dirname, 'template.html'), {encoding: 'utf-8'})
+    let template = await fsPromises.readFile(path.resolve(__dirname, 'template.html'), {
+        encoding: 'utf-8'
+    })
     return template
 }
 
 async function readComponents() {
     let filesList = {}
-    let components = await fsPromises.readdir(componentsPath, {withFileTypes: true})
+    let components = await fsPromises.readdir(componentsPath, {
+        withFileTypes: true
+    })
     components.forEach(component => {
         if (component.isFile() && path.extname(component.name) === '.html') {
             let fullFileName = path.resolve(componentsPath, component.name)
@@ -57,7 +62,9 @@ async function getComponents() {
     let componentsContent = {}
     let filesList = await readComponents();
     for (key in filesList) {
-        let content = await fsPromises.readFile(path.resolve(componentsPath, filesList[key]), {encoding: 'utf-8'})
+        let content = await fsPromises.readFile(path.resolve(componentsPath, filesList[key]), {
+            encoding: 'utf-8'
+        })
         componentsContent[key] = content
     }
     return componentsContent
@@ -72,9 +79,13 @@ async function createHtml() {
     templates.forEach(template => {
         templateHTML = templateHTML.replace(`{{${template}}}`, components[template])
     })
-    fsPromises.writeFile(path.resolve(projectPath, 'index.html'), templateHTML)
+    await fsPromises.writeFile(path.resolve(projectPath, 'index.html'), templateHTML)
 }
 
-copyDirectory(assetsPath, path.resolve(projectPath, 'assets'));
-createStyles(stylesPath, path.resolve(projectPath, 'style.css'));
-createHtml();
+async function init() {
+    await copyDirectory(assetsPath, path.resolve(projectPath, 'assets'));
+    await createStyles(stylesPath, path.resolve(projectPath, 'style.css'));
+    await createHtml();
+}
+
+init();
