@@ -1,27 +1,27 @@
-const fs = require('fs');
+const fs = require('fs/promises');
 const path = require('path');
 
 const currentPath = path.resolve(__dirname, 'files');
 const newPath = path.resolve(__dirname, 'files-copy');
 
 
-function createDir() {
-    fs.stat(newPath, (err) => {
-        if (err && err.code === 'ENOENT') {
-            fs.mkdir(newPath, (err) => {})
-        } else {
-            fs.rm(newPath, {force: true}, (err, files) => {})
-        }
+async function copyDirectory(src, dest) {
+    await fs.rm(dest, {
+        recursive: true,
+        force: true
     })
+    await fs.mkdir(dest, {
+        recursive: true
+    });
+    let entries = await fs.readdir(src, {
+        withFileTypes: true
+    });
+
+    for (let entry of entries) {
+        let srcPath = path.resolve(src, entry.name);
+        let destPath = path.resolve(dest, entry.name);
+        entry.isDirectory() ? await copyDirectory(srcPath, destPath) : await fs.copyFile(srcPath, destPath);
+    }
 }
 
-function copyDirectory() {
-    createDir()
-    fs.readdir(currentPath, (err, files) => {
-        files.forEach(file => {
-            fs.copyFile(path.resolve(currentPath, file), path.resolve(newPath, file), (err) => {})
-        })
-    })
-}
-
-copyDirectory()
+copyDirectory(currentPath, newPath)
